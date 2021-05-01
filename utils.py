@@ -9,7 +9,7 @@ Created on Thu Apr 29 15:02:28 2021
 import string
 from nltk.tokenize import word_tokenize
 
-
+MIN_PARAGRAPH_LEN = 50
 
 #quello che vogliamo fare è inividuare il topic come un insieme di set di vettori Nasari
 #cioè individuiamo il bag_of_words del titolo o della prima sentence (nel caso del topic)
@@ -73,7 +73,9 @@ def get_title_topic(document):
 def get_context_paragraph(paragraph):
     return get_Nasari_vectors_for_bag_of_words(bag_of_words(paragraph))
 
-
+#resistuisce il massimo weighted_overlap tra due concetti associati a due parole
+#i concetti sono liste di vettori, quindi massimizza il weighted_overlap tra due liste di
+#vettori NASARI
 def similarity(vector_list1, vector_list2):
     max_overlap = 0
     
@@ -84,7 +86,7 @@ def similarity(vector_list1, vector_list2):
                 max_overlap = overlap
     return max_overlap
 
-
+#calcola il weighted_overlap tra due vettori NASARI
 def compute_weighted_overlap(vector1,vector2):
     overlap = 0
     common_keys = get_common_keys(vector1, vector2)
@@ -102,7 +104,7 @@ def compute_weighted_overlap(vector1,vector2):
         
     return overlap
             
-
+#restituisce le chiavi (dimensioni) comuni tra due vettori NASARI
 def get_common_keys(vector1, vector2):
     common_keys = []
     for word1,score1 in vector1:
@@ -111,7 +113,7 @@ def get_common_keys(vector1, vector2):
                 common_keys.append(word1)
     return common_keys
 
-
+#calcola il rango di una chiave (dimensione) all'interno del vettore NASARI in input
 def rank(key, vector):
     for index,(word,value) in enumerate(vector):
         if word == key: return index + 1
@@ -145,8 +147,8 @@ def parse_document(doc):
     data = doc.read_text(encoding='utf-8')
     lines = data.split('\n')
     
-    for line in lines:
-        if line != "" and not "#" in line:
+    for index,line in enumerate(lines):
+        if line != "" and not "#" in line and (len(line) > MIN_PARAGRAPH_LEN or index == 3):
             line = line.replace("\n", "")
             document.append(line)
     return document
@@ -161,6 +163,7 @@ def get_stopwords():
     stopwords.close()
     return stopwords_list
 
+#tokenizza una frase in input
 def tokenize(sentence):
     return word_tokenize(sentence)
 
