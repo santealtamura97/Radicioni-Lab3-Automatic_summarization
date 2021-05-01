@@ -7,35 +7,9 @@ Created on Thu Apr 29 15:02:28 2021
 """
 
 import string
+from nltk.tokenize import word_tokenize
 
-"""
-#Restituisce una struttura dati che rappresenta l'insieme
-#di vettori NASARI. La struttura dati è un dizionario
-#che ha come chiavi la word_label che rappresenta il babel synset
-#e come valori delle liste di coppie (word,score)
 
-#es. {'Million': [('million', '209.35'), ('number', '146.31'), ('mathematics', '61.3'), 
-#('long scale', '53.31'), ('real number', '50.43'), ('numeral', '50.35'), 
-#('short scale', '50.12'), ('digit', '42.17'), ('bally', '41.77'), ('millionaire', '41.31'), 
-#('penguin', '41.11'), ('markov', '40.61'), ('complex number', '38.37'), ('infinity', '36.79')]}
-def get_Nasari_vectors():
-    nasari_vectors = dict()
-    file = open('utils/NASARI_vectors/dd-small-nasari-15.txt', 'r' , encoding="utf8")
-    for line in file:
-        line_splitted = line.replace("\n", "").split(";")
-        word_score_list = []
-        for item in line_splitted[2:]:
-            if "_" in item:
-               word, score = item.split("_")
-               word_score_list.append((word,score))
-        word_label = line_splitted[1]
-        nasari_vectors[word_label] = word_score_list
-        
-    file.close()    
-    return nasari_vectors
-"""
-#individuare il topic: se il titolo dei testi da riassumere non è abbastanza informativo
-#allora il topic verrà individuato nella prima frase del primo paragrafo
 
 #quello che vogliamo fare è inividuare il topic come un insieme di set di vettori Nasari
 #cioè individuiamo il bag_of_words del titolo o della prima sentence (nel caso del topic)
@@ -78,11 +52,70 @@ def vector_format(nasari_line):
             
     return word_score_list
 
-#restituisce un dizionario, dove, per ogni parola (chiave) è associata 
+#restituisce un dizionario, dove, ad ogni parola (chiave) è associata 
 #una lista di vettori NASARI
 def get_Nasari_vectors_for_bag_of_words(bag_of_words):
-    return
+    nasari_vectors_for_bag_of_words = dict()
+    for word in bag_of_words:
+        query_string = ';' + word + '_' #la ricerca avviene nel secondo modo
+        nasari_vectors = get_Nasari_vectors(query_string)
+        if word not in nasari_vectors_for_bag_of_words.keys() and nasari_vectors:
+            nasari_vectors_for_bag_of_words[word] = nasari_vectors
+    return nasari_vectors_for_bag_of_words
 
+#individuare il topic: se il titolo dei testi da riassumere non è abbastanza informativo
+#allora il topic verrà individuato nella prima frase del primo paragrafo    
+def get_title_topic(document):
+    title = document[0]
+    return get_Nasari_vectors_for_bag_of_words(bag_of_words(title))
+    
+
+def get_context_paragraph(paragraph):
+    return get_Nasari_vectors_for_bag_of_words(bag_of_words(paragraph))
+
+
+def similarity(vector_list1, vector_list2):
+    max_overlap = 0
+    
+    for vector1 in vector_list1:
+        for vector2 in vector_list2:
+            overlap = compute_weighted_overlap(vector1,vector2)
+            if overlap > max_overlap:
+                max_overlap = overlap
+    return max_overlap
+
+
+def compute_weighted_overlap(vector1,vector2):
+    overlap = 0
+    common_keys = get_common_keys(vector1, vector2)
+    
+    if len(common_keys) > 0:
+        numerator = 0
+        for q in common_keys:
+            numerator += (1 / (rank(q, vector1) + rank(q, vector2)))
+        
+        denominator = 0
+        for i in range(1, len(common_keys) + 1):
+            denominator += 1/ (2 * i)
+        
+        overlap = numerator / denominator
+        
+    return overlap
+            
+
+def get_common_keys(vector1, vector2):
+    common_keys = []
+    for word1,score1 in vector1:
+        for word2, score2 in vector2:
+            if word1 == word2:
+                common_keys.append(word1)
+    return common_keys
+
+
+def rank(key, vector):
+    for index,(word,value) in enumerate(vector):
+        if word == key: return index + 1
+            
 
 #Rimuove le stopwords da una lista di parola
 def remove_stopwords(words_list):
@@ -105,6 +138,20 @@ def remove_punctuation(words_list):
             new_words_list.append(new_word)
     return new_words_list
 
+#Restituisce una lista di paragrafi del documento in input
+#il primo paragrafo rappresenta il titolo
+def parse_document(doc):
+    document = []
+    data = doc.read_text(encoding='utf-8')
+    lines = data.split('\n')
+    
+    for line in lines:
+        if line != "" and not "#" in line:
+            line = line.replace("\n", "")
+            document.append(line)
+    return document
+   
+
 #Restituisce la l'insieme di stopwords dal file delle stopwords
 def get_stopwords():
     stopwords = open("stop_words_FULL.txt", "r")
@@ -114,10 +161,13 @@ def get_stopwords():
     stopwords.close()
     return stopwords_list
 
+def tokenize(sentence):
+    return word_tokenize(sentence)
+
 #restituisce la bag of word per la frase o il paragrafo in oggetto
 #effettua il pre-processing, ovvero la rimozione delle stopwords, punteggiatura e lemmatizzazione(?)-> per ora no  
 def bag_of_words(sentence):
-    return remove_stopwords(remove_punctuation(sentence))
+    return remove_stopwords(remove_punctuation(tokenize(sentence)))
     
     
     
