@@ -57,14 +57,13 @@ def vector_format(nasari_line):
 def get_Nasari_vectors_for_bag_of_words(bag_of_words):
     nasari_vectors_for_bag_of_words = dict()
     for word in bag_of_words:
-        query_string = ';' + word + '_' #la ricerca avviene nel secondo modo
+        query_string = ';' + word + '_' #la ricerca avviene nel secondo approccio
         nasari_vectors = get_Nasari_vectors(query_string)
         if word not in nasari_vectors_for_bag_of_words.keys() and nasari_vectors:
             nasari_vectors_for_bag_of_words[word] = nasari_vectors
     return nasari_vectors_for_bag_of_words
 
-#individuare il topic: se il titolo dei testi da riassumere non è abbastanza informativo
-#allora il topic verrà individuato nella prima frase del primo paragrafo    
+    
 def get_title_topic(document):
     title = document[0]
     return get_Nasari_vectors_for_bag_of_words(bag_of_words(title))

@@ -18,7 +18,7 @@ def summarization(document, reduction):
         paragraph_context = utils.get_context_paragraph(paragraph)
         
         average_topic_paragraph_overlap = 0 #overlap medio sul pragrafo corrente
-        match_count = 0 #conteggio dei match
+        match_count = 0 #conteggio totale degli overlap calcolati
         for key1 in paragraph_context.keys():
             for key2 in title_topic.keys():
                 #calcolo e sommo iterativamente la massimizzazione della similarità tra due concetti
@@ -40,28 +40,42 @@ def summarization(document, reduction):
     
     #ordiniamo in modo descrescente la lista di tuple (paragrafo, score)
     paragraphs_overlap = sorted(paragraphs_overlap, key=lambda x: x[1], reverse = True)[:number_of_paragraphs]
-    
-    for paragraph, score in paragraphs_overlap:
-        print(paragraph)
-        print()
-        print()
-        print(score)
                     
-    #ordiniamo i paragrafi nella lista list_of_paragraphs tenendo conto dell'ordine in cui i paragrafi compaiono nel documento originale
-    #list_of_paragraphs = sorted(paragraphs_overlap, key = lambda x: x[0])
+    #ordiniamo i paragrafi nella lista list_of_paragraphs tenendo conto dell'ordine in cui i paragrafi
+    #compaiono nel documento originale
+    summary = []
+    summary.append(document[0]) #aggiungiamo il titolo come primo paragrafo del riassunto
+    list_of_paragraphs = [paragraph[0] for paragraph in paragraphs_overlap]
+    for paragraph in document[1:]: 
+        if paragraph in list_of_paragraphs: 
+            summary.append(paragraph)
+            
     
+    return summary        
+        
     
-
 def main():
+    #l'utente può riassumere un insieme di file
     #prendiamo la lista di file con estensione .txt nella cartella docs
     files = Path('utils/docs/').glob('*.txt')
-    i = 0
-    
     for file in files:
-        print("====================================")
-        print("====================================")
-        summarization(utils.parse_document(file), 30)
-        i += 1
-        if i ==2 : break
+        print("file name : ",file.name)
+    files.close()
+    
+    #l'utente inserisce il nome del file che vuole riassumere
+    file_name = input("Inserire il nome del file da riassumere (compreso di .txt):\n")
+    
+    #l'utente inserisce la percentuale di riduzione del riassunto
+    reduction = int(input("Inserire la percentuale di riduzione (10,20,30):\n"))
+    
+    files = Path('utils/docs/').glob('*.txt')
+    for file in files:
+        if file.name == file_name:
+            summary = summarization(utils.parse_document(file), reduction)
+            for par in summary:
+                print(par)
+                print()
+    files.close()
+        
 
 main()
