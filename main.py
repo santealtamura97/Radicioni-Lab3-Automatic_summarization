@@ -68,14 +68,39 @@ def main():
     #l'utente inserisce la percentuale di riduzione del riassunto
     reduction = int(input("Inserire la percentuale di riduzione (10,20,30):\n"))
     
+    #-------FASE DI SUMMARIZATION--------#
     files = Path('utils/docs/').glob('*.txt')
     for file in files:
         if file.name == file_name:
             summary = summarization(utils.parse_document(file), reduction)
+            print("_______________________________________________________________")
+            print("\nRIASSUNTO:\n")
             for par in summary:
                 print(par)
                 print()
+            print("_______________________________________________________________")
     files.close()
-        
+    
+    
+    #-------RECUPERO RIASSUNTO GOLD------#
+    file_name = file_name.replace('.txt', "")
+    gold_summary_name = f"{file_name}{reduction}percent.txt"
+    files_gold = Path('utils/gold_summaries/').glob('*.txt')
+    for file in files_gold:
+        if file.name == gold_summary_name:
+            file_gold_summary = file
+    files.close()
+    gold_summary = utils.parse_document(file_gold_summary)
+    
+    #-------VALUTAZIONE SUI TERMINI------#
+    print("_______________________________________________________________")
+    precision,recall = utils.BLUE_ROUGE_terms_evaluation(gold_summary,summary)
+    
+    print("_______________________________________________________________")
+    #BLUE evaluation
+    print("Precision sui termini significativi: ",precision)
+    
+    #ROUGE evaluation
+    print("Recall sui termini significativi: ",recall)
 
 main()

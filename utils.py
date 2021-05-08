@@ -8,6 +8,9 @@ Created on Thu Apr 29 15:02:28 2021
 
 import string
 from nltk.tokenize import word_tokenize
+from collections import Counter
+import math
+from statistics import mean
 
 MIN_PARAGRAPH_LEN = 50
 
@@ -170,6 +173,79 @@ def tokenize(sentence):
 #effettua il pre-processing, ovvero la rimozione delle stopwords, punteggiatura e lemmatizzazione(?)-> per ora no  
 def bag_of_words(sentence):
     return remove_stopwords(remove_punctuation(tokenize(sentence)))
+
+
+#PRECISION e RECALL sui termini più importanti
+def BLUE_ROUGE_terms_evaluation(gold_summary,system_summary):
     
+    gold_important_words = get_important_words(gold_summary)
     
+    system_important_words = get_important_words(system_summary)
+
+    print("Gold important words: \n", gold_important_words)
+    print("\nSystem important words: \n", system_important_words)
     
+    precision = len(list(set(gold_important_words) & set(system_important_words))) / len(set(system_important_words))
+    
+    recall = len(list(set(gold_important_words) & set(system_important_words))) / len(set(gold_important_words))
+
+    
+    return precision,recall
+
+
+def get_tf_dictionary(gold_summary):
+    tf_dictionary = dict()
+    for paragraph in gold_summary[1:]:
+        bag_of_words_par = (bag_of_words(paragraph))
+        tf_par = Counter(bag_of_words_par)
+        for word in tf_par.keys():
+            if word not in tf_dictionary.keys(): tf_dictionary[word] = [tf_par[word] / len(bag_of_words_par)]
+            else: tf_dictionary[word].append(tf_par[word] / len(bag_of_words_par))
+    return tf_dictionary       
+            
+            
+def get_idf_dictionary(gold_summary,tf_dictionary):
+    idf_dictionary = dict()
+    n_paragraph = len(gold_summary[1:])
+    for word in tf_dictionary.keys():
+        n_paragraph_contains_word = 0
+        for paragraph in gold_summary[1:]:
+            if word in bag_of_words(paragraph):
+                n_paragraph_contains_word += 1
+        idf_dictionary[word] = math.log(n_paragraph / n_paragraph_contains_word)
+    return idf_dictionary
+
+
+def get_tf_idf_dictionary(tf_dictionary,idf_dictionary):
+    tf_idf_dictionary = dict()
+    for word in tf_dictionary.keys():
+        tfs_score = tf_dictionary[word] #tutti i term frequency associati alla word
+        idf_score = idf_dictionary[word] #idf associato alla word
+        tf_idf_dictionary[word] = mean([tf * idf_score for tf in tfs_score])
+    return tf_idf_dictionary
+        
+def get_important_words(summary):
+    #word -> tf1,tf2,tf3,...
+    #ogni tf è relativo al termine per un paragrafo
+    #un termine avrà n tf per ogni paragrafo in cui compare del gold summary
+    tf_dictionary = get_tf_dictionary(summary)
+   
+    #word -> idf
+    #un termine avrà un solo idf
+    idf_dictionary = get_idf_dictionary(summary, tf_dictionary)
+    
+    #un termine avrà un solo idf
+    #un termine avrà n tf-idf. verrà preso il tf-idf medio
+    tf_idf_dictionary = get_tf_idf_dictionary(tf_dictionary, idf_dictionary)
+    
+    #vengono ordinati in modo decrescente gli score tf-idf
+    sorted_tf_idf = sorted(tf_idf_dictionary.items(), key=lambda x: x[1], reverse=True)
+    
+    #vengono scelte le parole che superano la media di tf-idf di tutti i termini
+    important_words = []
+    average_tf_idf = mean([item[1] for item in sorted_tf_idf])
+    for item in sorted_tf_idf:
+        if item[1] >= average_tf_idf:
+            important_words.append(item[0])
+            
+    return important_words
