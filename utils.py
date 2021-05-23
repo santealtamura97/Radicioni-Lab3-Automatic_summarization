@@ -11,6 +11,7 @@ from nltk.tokenize import word_tokenize
 from collections import Counter
 import math
 from statistics import mean
+import re
 
 MIN_PARAGRAPH_LEN = 50
 
@@ -121,26 +122,7 @@ def rank(key, vector):
         if word == key: return index + 1
             
 
-#Rimuove le stopwords da una lista di parola
-def remove_stopwords(words_list):
-    stopwords_list = get_stopwords()
-    new_words_list = []
-    for word in words_list:
-        word_lower = word.lower()
-        if word_lower not in stopwords_list:
-            new_words_list.append(word_lower)
-    return new_words_list
 
-#Rimuove la punteggiatura da una lista di parole
-def remove_punctuation(words_list):
-    new_words_list = []
-    for word in words_list:
-        temp = word
-        if not temp.strip(string.punctuation) == "":
-            new_word = word.lower()
-            new_word = new_word.replace("'","")
-            new_words_list.append(new_word)
-    return new_words_list
 
 #Restituisce una lista di paragrafi del documento in input
 #il primo paragrafo rappresenta il titolo
@@ -154,6 +136,18 @@ def parse_document(doc):
             line = line.replace("\n", "")
             document.append(line)
     return document
+
+"""Funzioni di supporto"""
+
+#rimuove le stowords da una lista di parole
+def remove_stopwords(words_list):
+    stopwords_list = get_stopwords()
+    return [value.lower() for value in words_list if value not in stopwords_list]
+
+#Rimuove la punteggiatura da una sentence
+#Restituisce la sentence senza punteggiature
+def remove_punctuation(sentence):
+    return re.sub(r'[^\w\s]','',sentence)
    
 
 #Restituisce la l'insieme di stopwords dal file delle stopwords
@@ -172,8 +166,12 @@ def tokenize(sentence):
 #restituisce la bag of word per la frase o il paragrafo in oggetto
 #effettua il pre-processing, ovvero la rimozione delle stopwords, punteggiatura e lemmatizzazione(?)-> per ora no  
 def bag_of_words(sentence):
-    return remove_stopwords(remove_punctuation(tokenize(sentence)))
+    return set(remove_stopwords(tokenize(remove_punctuation(sentence))))
 
+
+
+
+"""Funzioni per la valutazione"""
 
 #PRECISION e RECALL sui termini più importanti
 def BLUE_ROUGE_terms_evaluation(gold_summary,system_summary):
