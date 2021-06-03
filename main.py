@@ -70,8 +70,10 @@ def main():
     
     #-------FASE DI SUMMARIZATION--------#
     files = Path('utils/docs/').glob('*.txt')
+    document = None
     for file in files:
         if file.name == file_name:
+            document = file
             summary = summarization(utils.parse_document(file), reduction)
             print("_______________________________________________________________")
             print("\nRIASSUNTO:\n")
@@ -81,7 +83,7 @@ def main():
             print("_______________________________________________________________")
     files.close()
     
-    
+    """
     #-------RECUPERO RIASSUNTO GOLD------#
     file_name = file_name.replace('.txt', "")
     gold_summary_name = f"{file_name}{reduction}percent.txt"
@@ -90,11 +92,11 @@ def main():
         if file.name == gold_summary_name:
             file_gold_summary = file
     files.close()
-    gold_summary = utils.parse_document(file_gold_summary)
+    gold_summary = utils.parse_document(file_gold_summary)"""
     
     #-------VALUTAZIONE SUI TERMINI------#
     print("_______________________________________________________________")
-    precision,recall = utils.BLUE_ROUGE_terms_evaluation(gold_summary,summary)
+    precision,recall = utils.BLUE_ROUGE_terms_evaluation(utils.parse_document(document),summary, reduction)
     
     print("_______________________________________________________________")
     #BLUE evaluation
