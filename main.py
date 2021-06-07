@@ -10,9 +10,17 @@ import utils
 from pathlib import Path
 
 #effettua il riassunto di un documento
-def summarization(document, reduction):
-    title_topic = utils.get_title_topic(document)
-
+def summarization(document, reduction, relevance_criteria):
+    
+    if relevance_criteria == 'title':
+        topic = utils.get_title_topic(document)
+    elif relevance_criteria == 'cue':
+        topic = utils.get_topic(document)
+    
+    print()
+    print("Topic of the file: ")
+    print(topic)
+    
     paragraphs_overlap = []
     for paragraph in document[1:]:
         paragraph_context = utils.get_context_paragraph(paragraph)
@@ -20,13 +28,13 @@ def summarization(document, reduction):
         average_topic_paragraph_overlap = 0 #overlap medio sul pragrafo corrente
         match_count = 0 #conteggio totale degli overlap calcolati
         for key1 in paragraph_context.keys():
-            for key2 in title_topic.keys():
+            for key2 in topic.keys():
                 #calcolo e sommo iterativamente la massimizzazione della similarità tra due concetti
                 #uno individuato dalla chiave nel contesto del paragrafo
                 #uno individuato dalla chiave nel topic
                 #ad ogni chiave corrisponde un concetto, individuato come una lista di vettori NASARI
                 average_topic_paragraph_overlap += utils.similarity(paragraph_context[key1],
-                                                                               title_topic[key2])
+                                                                               topic[key2])
                 match_count += 1
         
         #calcolo la media per il paragrafo corrente e aggiunto il paragrafo con il suo score
@@ -74,7 +82,7 @@ def main():
     for file in files:
         if file.name == file_name:
             document = file
-            summary = summarization(utils.parse_document(file), reduction)
+            summary = summarization(utils.parse_document(file), reduction, relevance_criteria='cue')
             print("_______________________________________________________________")
             print("\nRIASSUNTO:\n")
             for par in summary:
@@ -82,17 +90,6 @@ def main():
                 print()
             print("_______________________________________________________________")
     files.close()
-    
-    """
-    #-------RECUPERO RIASSUNTO GOLD------#
-    file_name = file_name.replace('.txt', "")
-    gold_summary_name = f"{file_name}{reduction}percent.txt"
-    files_gold = Path('utils/gold_summaries/').glob('*.txt')
-    for file in files_gold:
-        if file.name == gold_summary_name:
-            file_gold_summary = file
-    files.close()
-    gold_summary = utils.parse_document(file_gold_summary)"""
     
     #-------VALUTAZIONE SUI TERMINI------#
     print("_______________________________________________________________")

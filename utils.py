@@ -12,7 +12,25 @@ import math
 from statistics import mean
 import re
 
+from nltk.corpus import wordnet as wn
+import nltk
+from nltk.stem.wordnet import WordNetLemmatizer
+
 MIN_PARAGRAPH_LEN = 50
+
+#Le stigma words ci permettono di capire che NON stanno per essere dette cose importanti
+def get_stigma_words():
+    return ['no','not','i','you','she','he','we','they','it','me','him','her','us','them','mine','ours',
+            'hers','theirs','ourselves','myself','himself','who','whose','which','what','this','that',
+            'these','those','whom','whose']
+
+#Le bonus words ci permettono di capire che stanno per essere dette cose importanti
+def get_bonus_words():
+    return  ['better', 'worse', 'less', 'more', 'further', 'farther', 'best', 'worst', 'least', 'most',
+             'furthest', 'farthest', 'more', 'important','seen', 'all', 'fact', 'final', 'analysis',
+             'whole', 'brief', 'altogether', 'obviously','overall', 'ultimately', 'ordinarily',
+             'definitely','usually', 'emphasize', 'result','henceforth', 'additionally', 'main', 
+             'aim','purpose', 'outline', 'investigation']
 
 #quello che vogliamo fare è inividuare il topic come un insieme di set di vettori Nasari
 #cioè individuiamo il bag_of_words del titolo o della prima sentence (nel caso del topic)
@@ -57,23 +75,55 @@ def vector_format(nasari_line):
 
 #restituisce un dizionario, dove, ad ogni parola (chiave) è associata 
 #una lista di vettori NASARI
+#per cambiare nel primo approccio fare word.capitalize()
 def get_Nasari_vectors_for_bag_of_words(bag_of_words):
     nasari_vectors_for_bag_of_words = dict()
     for word in bag_of_words:
-        query_string = ';' + word + '_' #la ricerca avviene nel secondo approccio
+        query_string = ';' + word.capitalize() + ';' #la ricerca avviene nel secondo approccio
         nasari_vectors = get_Nasari_vectors(query_string)
         if word not in nasari_vectors_for_bag_of_words.keys() and nasari_vectors:
             nasari_vectors_for_bag_of_words[word] = nasari_vectors
     return nasari_vectors_for_bag_of_words
 
-    
+"""Approccio TITLE"""
+#Metodo utilizzato nell'approccio TITLE
+#il topic viene preso dal primo paragrafo del documento che in generale è il titolo
 def get_title_topic(document):
     title = document[0]
     return get_Nasari_vectors_for_bag_of_words(bag_of_words(title))
-    
+"""Approccio TITLE"""
 
+"""Approccio CUE"""
+#Medoto utilizzato nell'approccio CUE
+#Restituisce il topic del paragrafo più importante del documento
+#il paragrafo più importante del documento è scelto in base alla prensenza di stigma word o bonus word
+#ad ogni paragrafo viene associato un punteggio che aumenta di 1 per ogni bonus word
+#e diminuisce di 1 per ogni stigma word al suo interno
+#viene stilato un ranking e come topic viene scelto il paragrafo con il punteggio più alto
+def get_topic(document):
+    paragraph_score = []
+    for paragraph in document:
+        paragraph_score.append((paragraph, get_CUE_score(paragraph)))
+    more_important_paragraph =  sorted(paragraph_score, key=lambda x: x[1], reverse = True)[0] #prendo il primo in classifica
+    print("MORE IMPORTANT PARAGRAPH: \n", more_important_paragraph)
+    print(bag_of_words(more_important_paragraph[0]))
+    return get_Nasari_vectors_for_bag_of_words(bag_of_words(more_important_paragraph[0]))
+
+#Restituisce uno score per il paragrafo in input
+#direttamente proporzionale alle bonus word e inversamente proporzionale alle stigma word
+#lo score è un numero intero positivo o negativo
+def get_CUE_score(paragraph):
+    word_list = tokenize(remove_punctuation(paragraph))
+    score = 0
+    for word in word_list:
+        if word in get_bonus_words(): score += 1
+        elif word in get_stigma_words(): score -= 1
+    return score
+"""Approccio CUE"""   
+      
 def get_context_paragraph(paragraph):
     return get_Nasari_vectors_for_bag_of_words(bag_of_words(paragraph))
+
 
 #resistuisce il massimo weighted_overlap tra due concetti associati a due parole
 #i concetti sono liste di vettori, quindi massimizza il weighted_overlap tra due liste di
@@ -83,7 +133,7 @@ def similarity(vector_list1, vector_list2):
     
     for vector1 in vector_list1:
         for vector2 in vector_list2:
-            overlap = compute_weighted_overlap(vector1,vector2)
+            overlap = math.sqrt(compute_weighted_overlap(vector1,vector2))
             if overlap > max_overlap:
                 max_overlap = overlap
     return max_overlap
@@ -121,8 +171,6 @@ def rank(key, vector):
         if word == key: return index + 1
             
 
-
-
 #Restituisce una lista di paragrafi del documento in input
 #il primo paragrafo rappresenta il titolo
 def parse_document(doc):
@@ -136,12 +184,13 @@ def parse_document(doc):
             document.append(line)
     return document
 
+
 """Funzioni di supporto"""
 
 #rimuove le stowords da una lista di parole
 def remove_stopwords(words_list):
     stopwords_list = get_stopwords()
-    return [value.lower() for value in words_list if value not in stopwords_list]
+    return [value.lower() for value in words_list if value.lower() not in stopwords_list]
 
 #Rimuove la punteggiatura da una sentence
 #Restituisce la sentence senza punteggiature
@@ -158,9 +207,25 @@ def get_stopwords():
     stopwords.close()
     return stopwords_list
 
+"""
 #tokenizza una frase in input
 def tokenize(sentence):
-    return word_tokenize(sentence)
+    return word_tokenize(sentence)"""
+
+#Tokenizza la frase in input e ne affettua anche la lemmatizzazione della sue parole
+def tokenize(sentence):
+    words_list = []
+    lmtzr = WordNetLemmatizer()
+    for tag in nltk.pos_tag(word_tokenize(sentence)):
+        if (tag[1][:2] == "NN"):
+            words_list.append(lmtzr.lemmatize(tag[0], pos = wn.NOUN))
+        elif (tag[1][:2] == "VB"):
+             words_list.append(lmtzr.lemmatize(tag[0], pos = wn.VERB))
+        elif (tag[1][:2] == "RB"):
+             words_list.append(lmtzr.lemmatize(tag[0], pos = wn.ADV))
+        elif (tag[1][:2] == "JJ"):
+             words_list.append(lmtzr.lemmatize(tag[0], pos = wn.ADJ))
+    return words_list
 
 #restituisce la bag of word per la frase o il paragrafo in oggetto
 #effettua il pre-processing, ovvero la rimozione delle stopwords, punteggiatura e lemmatizzazione(?)-> per ora no  
@@ -176,8 +241,8 @@ def BLUE_ROUGE_terms_evaluation(document,system_summary, reduction):
     gold_important_words = get_important_words(document, reduction)
     system_words = get_words(system_summary)
 
-    print("Gold important words: \n", gold_important_words)
-    print("\nSystem words: \n", system_words)
+    print("Document's important words: \n", gold_important_words)
+    print("\nSystem summary words: \n", system_words)
     
     precision = len(gold_important_words.intersection(system_words)) / len(system_words)
     
