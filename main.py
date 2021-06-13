@@ -58,7 +58,6 @@ def summarization(document, reduction, relevance_criteria):
         if paragraph in list_of_paragraphs: 
             summary.append(paragraph)
             
-    
     return summary        
         
     

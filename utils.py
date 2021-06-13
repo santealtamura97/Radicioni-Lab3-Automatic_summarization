@@ -32,22 +32,7 @@ def get_bonus_words():
              'definitely','usually', 'emphasize', 'result','henceforth', 'additionally', 'main', 
              'aim','purpose', 'outline', 'investigation']
 
-#quello che vogliamo fare è inividuare il topic come un insieme di set di vettori Nasari
-#cioè individuiamo il bag_of_words del titolo o della prima sentence (nel caso del topic)
-#oppure il bag_of_words relativo un paragrafo
-#ed assegniamo ad ogni word un set di vettori Nasari corrispondenti
 
-#MAPPING - 2 APPROCCI:
-# 1. associare ad una word il set di vettori NASARI facendo matchare il wikititlepage del vettore
-# 2. associare ad una word il set di vettori NASARI facendo matchare con le dimensioni dei vettori, ovvero i lemmi a cui sono associati gli score
-
-#se la ricerca dei vettori avviene con la stringa del tipo ;Word; allora verrà
-#implementato l'approccio 1, restituendo le righe corrispondenti ai vettori
-#che contengono quella stringa
-
-#se la ricerca dei vettori avviene con la stringa del tipo ;word_ allora verrà
-#implementato l'approccio 2, restituendo le righe corrispondenti ai vettori
-#che contengono quella stringa
 def get_Nasari_vectors(query_string):
     nasari_vectors = list()
     file = open('utils/NASARI_vectors/dd-small-nasari-15.txt', 'r' , encoding="utf8")
@@ -75,7 +60,11 @@ def vector_format(nasari_line):
 
 #restituisce un dizionario, dove, ad ogni parola (chiave) è associata 
 #una lista di vettori NASARI
-#per cambiare nel primo approccio fare word.capitalize()
+#MAPPING -APPROCCIO:
+#associare ad una word il set di vettori NASARI facendo matchare il wikititlepage del vettore
+#se la ricerca dei vettori avviene con la stringa del tipo ;Word; allora verrà
+#implementato l'approccio 1, restituendo le righe corrispondenti ai vettori
+#che contengono quella stringa
 def get_Nasari_vectors_for_bag_of_words(bag_of_words):
     nasari_vectors_for_bag_of_words = dict()
     for word in bag_of_words:
@@ -207,10 +196,6 @@ def get_stopwords():
     stopwords.close()
     return stopwords_list
 
-"""
-#tokenizza una frase in input
-def tokenize(sentence):
-    return word_tokenize(sentence)"""
 
 #Tokenizza la frase in input e ne affettua anche la lemmatizzazione della sue parole
 def tokenize(sentence):
@@ -250,11 +235,12 @@ def BLUE_ROUGE_terms_evaluation(document,system_summary, reduction):
 
     return precision,recall
     
-
+#restituisce il dizionario dei tf per ogni parola nel documento
+#ogni parola avrà tanti tf quanti sono i paragrafi del documento
 def get_tf_dictionary(document):
     tf_dictionary = dict()
     for paragraph in document[1:]:
-        bag_of_words_par = (bag_of_words(paragraph))
+        bag_of_words_par = remove_stopwords(tokenize(remove_punctuation(paragraph)))
         tf_par = Counter(bag_of_words_par)
         for word in tf_par.keys():
             if word not in tf_dictionary.keys(): tf_dictionary[word] = [tf_par[word] / len(bag_of_words_par)]
@@ -287,14 +273,13 @@ def get_tf_idf_dictionary(tf_dictionary,idf_dictionary):
 def get_important_words(document, reduction):
     #word -> tf1,tf2,tf3,...
     #ogni tf è relativo al termine per un paragrafo
-    #un termine avrà n tf per ogni paragrafo in cui compare del gold summary
+    #un termine avrà n tf per ogni paragrafo del documento
     tf_dictionary = get_tf_dictionary(document)
    
     #word -> idf
     #un termine avrà un solo idf
     idf_dictionary = get_idf_dictionary(document, tf_dictionary)
     
-    #un termine avrà un solo idf
     #un termine avrà n tf-idf. verrà preso il tf-idf medio
     tf_idf_dictionary = get_tf_idf_dictionary(tf_dictionary, idf_dictionary)
     
